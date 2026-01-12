@@ -4,13 +4,13 @@ import jsonschema
 from tests.schemas import (CREATE_COMMAND_RESPONSE_SCHEMA, COMMAND_STATUS_RESPONSE_SCHEMA)
 
 # Позитивный сценарий: создание команды
-def test_positive_create_command(api_client):
-    response = api_client.create_command("sensor-1","RESTART")
+def test_positive_create_command(commands_api):
+    response = commands_api.create_command("sensor-1","RESTART")
 
     assert response['status'] == 'NEW'
     jsonschema.validate(response, CREATE_COMMAND_RESPONSE_SCHEMA)
     
-    final_status = api_client.wait_polling(response['id'], timeout=30)
+    final_status = commands_api.wait_polling(response['id'], timeout=30)
     assert final_status['status'] == 'SUCCESS'
     assert final_status['result'] == 'OK'
     jsonschema.validate(final_status, COMMAND_STATUS_RESPONSE_SCHEMA)
@@ -22,11 +22,11 @@ def test_positive_create_command(api_client):
 ])
 
 # Негативный сценарий
-def test_negative(api_client, invalid_device_id, test_description):
+def test_negative(commands_api, invalid_device_id, test_description):
     print(f"\nTest: {test_description} (device_id={repr(invalid_device_id)})")
     
     try:
-        api_client.create_command(device_id=invalid_device_id, command="RESTART")
+        commands_api.create_command(device_id=invalid_device_id, command="RESTART")
         pytest.fail(f"Waiting error 400 for device_id: {invalid_device_id}")
 
     except requests.HTTPError as err:
@@ -37,8 +37,8 @@ def test_negative(api_client, invalid_device_id, test_description):
         print(f"Got waiting error: {error_data}")
     
 # Ассинхронность, polling, таймаут
-def test_async_command_polling(api_client):
-   command_response = api_client.create_command(
+def test_async_command_polling(commands_api):
+   command_response = commands_api.create_command(
        device_id="sensor-1",
        command="RESTART"
    )
@@ -46,7 +46,7 @@ def test_async_command_polling(api_client):
    command_id = command_response['id']
    print(f"Created command: {command_id}")
  
-   final_status = api_client.wait_polling(
+   final_status = commands_api.wait_polling(
         command_id=command_id,
         timeout=30
     )
